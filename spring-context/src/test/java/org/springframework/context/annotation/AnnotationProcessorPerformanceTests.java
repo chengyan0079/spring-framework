@@ -19,6 +19,7 @@ package org.springframework.context.annotation;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import javax.annotation.Resource;
 
 import org.apache.commons.logging.Log;
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
@@ -62,7 +64,7 @@ public class AnnotationProcessorPerformanceTests {
 		GenericApplicationContext ctx = createContext();
 
 		RootBeanDefinition rbd = new RootBeanDefinition(ResourceAnnotatedTestBean.class);
-		rbd.setScope(RootBeanDefinition.SCOPE_PROTOTYPE);
+		rbd.setScope(BeanDefinition.SCOPE_PROTOTYPE);
 		ctx.registerBeanDefinition("test", rbd);
 		ctx.registerBeanDefinition("spouse", new RootBeanDefinition(TestBean.class));
 
@@ -74,7 +76,7 @@ public class AnnotationProcessorPerformanceTests {
 		GenericApplicationContext ctx = createContext();
 
 		RootBeanDefinition rbd = new RootBeanDefinition(ResourceAnnotatedTestBean.class);
-		rbd.setScope(RootBeanDefinition.SCOPE_PROTOTYPE);
+		rbd.setScope(BeanDefinition.SCOPE_PROTOTYPE);
 		rbd.getPropertyValues().add("spouse", new RuntimeBeanReference("spouse"));
 		ctx.registerBeanDefinition("test", rbd);
 		ctx.registerBeanDefinition("spouse", new RootBeanDefinition(TestBean.class));
@@ -87,7 +89,7 @@ public class AnnotationProcessorPerformanceTests {
 		GenericApplicationContext ctx = createContext();
 
 		RootBeanDefinition rbd = new RootBeanDefinition(AutowiredAnnotatedTestBean.class);
-		rbd.setScope(RootBeanDefinition.SCOPE_PROTOTYPE);
+		rbd.setScope(BeanDefinition.SCOPE_PROTOTYPE);
 		ctx.registerBeanDefinition("test", rbd);
 		ctx.registerBeanDefinition("spouse", new RootBeanDefinition(TestBean.class));
 
@@ -99,7 +101,7 @@ public class AnnotationProcessorPerformanceTests {
 		GenericApplicationContext ctx = createContext();
 
 		RootBeanDefinition rbd = new RootBeanDefinition(AutowiredAnnotatedTestBean.class);
-		rbd.setScope(RootBeanDefinition.SCOPE_PROTOTYPE);
+		rbd.setScope(BeanDefinition.SCOPE_PROTOTYPE);
 		rbd.getPropertyValues().add("spouse", new RuntimeBeanReference("spouse"));
 		ctx.registerBeanDefinition("test", rbd);
 		ctx.registerBeanDefinition("spouse", new RootBeanDefinition(TestBean.class));

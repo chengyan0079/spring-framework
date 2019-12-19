@@ -23,6 +23,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Properties;
+
 import javax.inject.Inject;
 
 import org.junit.jupiter.api.Test;
@@ -304,6 +305,7 @@ public class PropertySourceAnnotationTests {
 
 		@Inject Environment env;
 
+		@SuppressWarnings("rawtypes")
 		@Bean
 		public FactoryBean testBean() {
 			final String name = env.getProperty("testbean.name");

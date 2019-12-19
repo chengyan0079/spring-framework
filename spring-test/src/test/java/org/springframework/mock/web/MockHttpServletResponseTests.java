@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
+
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
@@ -41,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
  * @author Sam Brannen
  * @author Brian Clozel
  * @author Sebastien Deleuze
+ * @author Vedran Pavic
  * @since 19.02.2006
  */
 class MockHttpServletResponseTests {
@@ -333,23 +335,87 @@ class MockHttpServletResponseTests {
 		assertThat(response.getStatus()).isEqualTo(HttpServletResponse.SC_NOT_FOUND);
 	}
 
+	/**
+	 * @since 5.1.10
+	 */
 	@Test
-	void setCookieHeaderValid() {
-		response.addHeader(HttpHeaders.SET_COOKIE, "SESSION=123; Path=/; Secure; HttpOnly; SameSite=Lax");
-		Cookie cookie = response.getCookie("SESSION");
-		assertThat(cookie).isNotNull();
-		boolean condition = cookie instanceof MockCookie;
-		assertThat(condition).isTrue();
-		assertThat(cookie.getName()).isEqualTo("SESSION");
-		assertThat(cookie.getValue()).isEqualTo("123");
-		assertThat(cookie.getPath()).isEqualTo("/");
-		assertThat(cookie.getSecure()).isTrue();
-		assertThat(cookie.isHttpOnly()).isTrue();
-		assertThat(((MockCookie) cookie).getSameSite()).isEqualTo("Lax");
+	void setCookieHeader() {
+		response.setHeader(HttpHeaders.SET_COOKIE, "SESSION=123; Path=/; Secure; HttpOnly; SameSite=Lax");
+		assertNumCookies(1);
+		assertPrimarySessionCookie("123");
+
+		// Setting the Set-Cookie header a 2nd time should overwrite the previous value
+		response.setHeader(HttpHeaders.SET_COOKIE, "SESSION=999; Path=/; Secure; HttpOnly; SameSite=Lax");
+		assertNumCookies(1);
+		assertPrimarySessionCookie("999");
+	}
+
+	/**
+	 * @since 5.1.11
+	 */
+	@Test
+	void setCookieHeaderWithExpiresAttribute() {
+		String cookieValue = "SESSION=123; Path=/; Max-Age=100; Expires=Tue, 8 Oct 2019 19:50:00 GMT; Secure; " +
+				"HttpOnly; SameSite=Lax";
+		response.setHeader(HttpHeaders.SET_COOKIE, cookieValue);
+		assertNumCookies(1);
+		assertThat(response.getHeader(HttpHeaders.SET_COOKIE)).isEqualTo(cookieValue);
+	}
+
+	/**
+	 * @since 5.1.12
+	 */
+	@Test
+	void setCookieHeaderWithZeroExpiresAttribute() {
+		String cookieValue = "SESSION=123; Path=/; Max-Age=100; Expires=0";
+		response.setHeader(HttpHeaders.SET_COOKIE, cookieValue);
+		assertNumCookies(1);
+		String header = response.getHeader(HttpHeaders.SET_COOKIE);
+		assertThat(header).isNotEqualTo(cookieValue);
+		// We don't assert the actual Expires value since it is based on the current time.
+		assertThat(header).startsWith("SESSION=123; Path=/; Max-Age=100; Expires=");
 	}
 
 	@Test
-	void addMockCookie() {
+	void addCookieHeader() {
+		response.addHeader(HttpHeaders.SET_COOKIE, "SESSION=123; Path=/; Secure; HttpOnly; SameSite=Lax");
+		assertNumCookies(1);
+		assertPrimarySessionCookie("123");
+
+		// Adding a 2nd cookie header should result in 2 cookies.
+		response.addHeader(HttpHeaders.SET_COOKIE, "SESSION=999; Path=/; Secure; HttpOnly; SameSite=Lax");
+		assertNumCookies(2);
+		assertPrimarySessionCookie("123");
+		assertCookieValues("123", "999");
+	}
+
+	/**
+	 * @since 5.1.11
+	 */
+	@Test
+	void addCookieHeaderWithExpiresAttribute() {
+		String cookieValue = "SESSION=123; Path=/; Max-Age=100; Expires=Tue, 8 Oct 2019 19:50:00 GMT; Secure; " +
+				"HttpOnly; SameSite=Lax";
+		response.addHeader(HttpHeaders.SET_COOKIE, cookieValue);
+		assertThat(response.getHeader(HttpHeaders.SET_COOKIE)).isEqualTo(cookieValue);
+	}
+
+	/**
+	 * @since 5.1.12
+	 */
+	@Test
+	void addCookieHeaderWithZeroExpiresAttribute() {
+		String cookieValue = "SESSION=123; Path=/; Max-Age=100; Expires=0";
+		response.addHeader(HttpHeaders.SET_COOKIE, cookieValue);
+		assertNumCookies(1);
+		String header = response.getHeader(HttpHeaders.SET_COOKIE);
+		assertThat(header).isNotEqualTo(cookieValue);
+		// We don't assert the actual Expires value since it is based on the current time.
+		assertThat(header).startsWith("SESSION=123; Path=/; Max-Age=100; Expires=");
+	}
+
+	@Test
+	void addCookie() {
 		MockCookie mockCookie = new MockCookie("SESSION", "123");
 		mockCookie.setPath("/");
 		mockCookie.setDomain("example.com");
@@ -360,8 +426,33 @@ class MockHttpServletResponseTests {
 
 		response.addCookie(mockCookie);
 
+		assertNumCookies(1);
 		assertThat(response.getHeader(HttpHeaders.SET_COOKIE)).isEqualTo(("SESSION=123; Path=/; Domain=example.com; Max-Age=0; " +
 				"Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=Lax"));
+
+		// Adding a 2nd Cookie should result in 2 Cookies.
+		response.addCookie(new MockCookie("SESSION", "999"));
+		assertNumCookies(2);
+		assertCookieValues("123", "999");
+	}
+
+	private void assertNumCookies(int expected) {
+		assertThat(this.response.getCookies()).hasSize(expected);
+	}
+
+	private void assertCookieValues(String... expected) {
+		assertThat(response.getCookies()).extracting(Cookie::getValue).containsExactly(expected);
+	}
+
+	private void assertPrimarySessionCookie(String expectedValue) {
+		Cookie cookie = this.response.getCookie("SESSION");
+		assertThat(cookie).isInstanceOf(MockCookie.class);
+		assertThat(cookie.getName()).isEqualTo("SESSION");
+		assertThat(cookie.getValue()).isEqualTo(expectedValue);
+		assertThat(cookie.getPath()).isEqualTo("/");
+		assertThat(cookie.getSecure()).isTrue();
+		assertThat(cookie.isHttpOnly()).isTrue();
+		assertThat(((MockCookie) cookie).getSameSite()).isEqualTo("Lax");
 	}
 
 }
