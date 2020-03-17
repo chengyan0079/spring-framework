@@ -107,11 +107,10 @@ public class ContentDispositionTests {
 	@Test // gh-23077
 	public void parseWithEscapedQuote() {
 
-		BiConsumer<String, String> tester = (description, filename) -> {
+		BiConsumer<String, String> tester = (description, filename) ->
 			assertThat(parse("form-data; name=\"file\"; filename=\"" + filename + "\"; size=123"))
 					.as(description)
 					.isEqualTo(builder("form-data").name("file").filename(filename).size(123L).build());
-		};
 
 		tester.accept("Escaped quotes should be ignored",
 				"\\\"The Twilight Zone\\\".txt");
@@ -224,7 +223,11 @@ public class ContentDispositionTests {
 	public void formatWithFilenameWithQuotes() {
 
 		BiConsumer<String, String> tester = (input, output) -> {
+
 			assertThat(builder("form-data").filename(input).build().toString())
+					.isEqualTo("form-data; filename=\"" + output + "\"");
+
+			assertThat(builder("form-data").filename(input, StandardCharsets.US_ASCII).build().toString())
 					.isEqualTo("form-data; filename=\"" + output + "\"");
 		};
 
@@ -245,6 +248,10 @@ public class ContentDispositionTests {
 
 		tester.accept("\"\"foo.txt", "\\\"\\\"foo.txt");
 		tester.accept("\"\"\"foo.txt", "\\\"\\\"\\\"foo.txt");
+
+		tester.accept("foo.txt\\", "foo.txt");
+		tester.accept("foo.txt\\\\", "foo.txt\\\\");
+		tester.accept("foo.txt\\\\\\", "foo.txt\\\\");
 	}
 
 	@Test
