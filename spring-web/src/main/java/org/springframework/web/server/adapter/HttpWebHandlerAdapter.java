@@ -59,7 +59,7 @@ public class HttpWebHandlerAdapter extends WebHandlerDecorator implements HttpHa
 
 	/**
 	 * Dedicated log category for disconnected client exceptions.
-	 * <p>Servlet containers dn't expose a a client disconnected callback, see
+	 * <p>Servlet containers don't expose a client disconnected callback; see
 	 * <a href="https://github.com/eclipse-ee4j/servlet-api/issues/44">eclipse-ee4j/servlet-api#44</a>.
 	 * <p>To avoid filling logs with unnecessary stack traces, we make an
 	 * effort to identify such network failures on a per-server basis, and then
@@ -81,7 +81,8 @@ public class HttpWebHandlerAdapter extends WebHandlerDecorator implements HttpHa
 
 	private WebSessionManager sessionManager = new DefaultWebSessionManager();
 
-	private ServerCodecConfigurer codecConfigurer = ServerCodecConfigurer.create();
+	@Nullable
+	private ServerCodecConfigurer codecConfigurer;
 
 	private LocaleContextResolver localeContextResolver = new AcceptHeaderLocaleContextResolver();
 
@@ -143,6 +144,9 @@ public class HttpWebHandlerAdapter extends WebHandlerDecorator implements HttpHa
 	 * Return the configured {@link ServerCodecConfigurer}.
 	 */
 	public ServerCodecConfigurer getCodecConfigurer() {
+		if (this.codecConfigurer == null) {
+			setCodecConfigurer(ServerCodecConfigurer.create());
+		}
 		return this.codecConfigurer;
 	}
 
